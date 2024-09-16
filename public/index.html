@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <title>多人俄罗斯方块</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>多人俄罗斯方块</h1>
+
+    <!-- 昵称输入框 -->
+    <div id="nicknameContainer">
+        <label for="nicknameInput">请输入您的昵称：</label>
+        <input type="text" id="nicknameInput" placeholder="昵称">
+        <button id="setNicknameBtn">确定</button>
+    </div>
+
+    <div id="interfaces" style="display: none;">
+        <!-- 四个游戏界面 -->
+        <!-- 界面0 -->
+        <div class="game-interface" data-index="0">
+            <canvas id="gameCanvas0" width="300" height="600"></canvas>
+            <canvas id="nextCanvas0" class="nextCanvas" width="120" height="120"></canvas>
+            <div class="nickname" id="nickname0">昵称：未设置</div>
+            <div class="score" id="score0">分数: 0</div>
+            <div class="timer">
+                <div id="selectionTimer0">选择时长: 0.000 秒</div>
+                <div id="gameTimer0">游戏时长: 0.000 秒</div>
+            </div>
+            <button class="startBtn" style="display: none;">开始游戏</button>
+            <button class="pauseBtn" style="display: none;">暂停游戏</button>
+            <button class="selectBtn">选择界面 1</button>
+            <button class="cancelBtn" style="display: none;">取消选择</button>
+        </div>
+        <!-- 界面1 -->
+        <div class="game-interface" data-index="1">
+            <canvas id="gameCanvas1" width="300" height="600"></canvas>
+            <canvas id="nextCanvas1" class="nextCanvas" width="120" height="120"></canvas>
+            <div class="nickname" id="nickname1">昵称：未设置</div>
+            <div class="score" id="score1">分数: 0</div>
+            <div class="timer">
+                <div id="selectionTimer1">选择时长: 0.000 秒</div>
+                <div id="gameTimer1">游戏时长: 0.000 秒</div>
+            </div>
+            <button class="startBtn" style="display: none;">开始游戏</button>
+            <button class="pauseBtn" style="display: none;">暂停游戏</button>
+            <button class="selectBtn">选择界面 2</button>
+            <button class="cancelBtn" style="display: none;">取消选择</button>
+        </div>
+        <!-- 界面2 -->
+        <div class="game-interface" data-index="2">
+            <canvas id="gameCanvas2" width="300" height="600"></canvas>
+            <canvas id="nextCanvas2" class="nextCanvas" width="120" height="120"></canvas>
+            <div class="nickname" id="nickname2">昵称：未设置</div>
+            <div class="score" id="score2">分数: 0</div>
+            <div class="timer">
+                <div id="selectionTimer2">选择时长: 0.000 秒</div>
+                <div id="gameTimer2">游戏时长: 0.000 秒</div>
+            </div>
+            <button class="startBtn" style="display: none;">开始游戏</button>
+            <button class="pauseBtn" style="display: none;">暂停游戏</button>
+            <button class="selectBtn">选择界面 3</button>
+            <button class="cancelBtn" style="display: none;">取消选择</button>
+        </div>
+        <!-- 界面3 -->
+        <div class="game-interface" data-index="3">
+            <canvas id="gameCanvas3" width="300" height="600"></canvas>
+            <canvas id="nextCanvas3" class="nextCanvas" width="120" height="120"></canvas>
+            <div class="nickname" id="nickname3">昵称：未设置</div>
+            <div class="score" id="score3">分数: 0</div>
+            <div class="timer">
+                <div id="selectionTimer3">选择时长: 0.000 秒</div>
+                <div id="gameTimer3">游戏时长: 0.000 秒</div>
+            </div>
+            <button class="startBtn" style="display: none;">开始游戏</button>
+            <button class="pauseBtn" style="display: none;">暂停游戏</button>
+            <button class="selectBtn">选择界面 4</button>
+            <button class="cancelBtn" style="display: none;">取消选择</button>
+        </div>
+    </div>
+
+    <!-- 聊天室 -->
+    <div id="chatContainer" class="draggable minimized">
+        <div id="chatHeader">
+            <span>聊天室</span>
+        </div>
+        <div id="chatContent">
+            <div id="chatMessages"></div>
+            <input type="text" id="chatInput" placeholder="输入消息...">
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+
+</body>
+</html>
