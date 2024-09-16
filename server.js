@@ -1,4 +1,8 @@
-// server.js
+/**
+ * 版权所有 © 2024 Admin-jwzz
+ * 许可证：CC BY-NC 4.0
+ * 详情请参阅 LICENSE 文件。
+ */
 
 const express = require('express');
 const app = express();
