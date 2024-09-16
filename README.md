@@ -178,7 +178,9 @@ npm start
 
 ## 许可证
 
-[MIT License](LICENSE)
+本项目采用 [CC BY-NC 4.0](LICENSE)。
+
+版权所有 © 2024 Admin-jwzz
 
 ---
 
