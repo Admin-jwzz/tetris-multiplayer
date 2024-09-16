@@ -38,7 +38,7 @@ tetris-multiplayer/
 ### 1. 克隆项目代码
 
 ```bash
-git clone https://github.com/yourusername/tetris-multiplayer.git
+git clone https://github.com/Admin-jwzz/tetris-multiplayer.git
 ```
 
 或者直接下载项目的 ZIP 压缩包并解压。
