@@ -3,3 +3,4 @@ sessions/
 data.json
 chat_history.txt
 *.log
+.gitignore

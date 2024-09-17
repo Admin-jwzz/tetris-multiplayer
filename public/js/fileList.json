@@ -1,9 +1,0 @@
-[
-    "modules/variables.js",
-    "modules/gameLogic.js",
-    "modules/uiHandlers.js",
-    "modules/chatHandlers.js",
-    "modules/initialization.js",
-    "modules/socketHandlers.js",
-    "modules/eventListeners.js"
-]
