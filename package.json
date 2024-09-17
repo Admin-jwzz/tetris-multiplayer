@@ -1,10 +1,11 @@
 {
   "name": "tetris-multiplayer",
-  "version": "1.0.0",
-  "main": "index.js",
+  "version": "1.0.1",
+  "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js"
+    "watch:build": "nodemon --watch public/js --ext js --exec \"node public/scripts/build.js\"",
+    "dev": "concurrently \"nodemon server.js\" \"npm run watch:build\""
   },
   "keywords": [],
   "author": "",
@@ -21,6 +22,7 @@
     "socket.io": "^4.7.5"
   },
   "devDependencies": {
+    "concurrently": "^9.0.1",
     "nodemon": "^3.1.4"
   }
 }
