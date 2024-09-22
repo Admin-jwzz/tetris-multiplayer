@@ -4,6 +4,8 @@
  * 详情请参阅 LICENSE 文件。
  */
 
+// client.js
+
 // 全局变量
 let socket;
 let sessionID;
@@ -63,14 +65,34 @@ function hasSessionCookie() {
 if (hasSessionCookie()) {
     nickname = localStorage.getItem('nickname') || '';
     console.log('从 localStorage 获取的昵称:', nickname);
-    nicknameContainer.style.display = 'none';
-    document.getElementById('interfaces').style.display = 'flex';
 
-    // 初始化 Socket.io 连接
-    initSocketConnection();
+    // 会话检查
+    fetch('/checkSession', {
+        method: 'GET',
+        credentials: 'include' // 发送 cookie
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.valid) {
+            nicknameContainer.style.display = 'none';
+            document.getElementById('interfaces').style.display = 'flex';
 
-    // 允许使用聊天室
-    chatInput.disabled = false;
+            // 初始化 Socket.io 连接
+            initSocketConnection();
+
+            // 允许使用聊天室
+            chatInput.disabled = false;
+        } else {
+            // 会话无效，清除数据并重新加载页面
+            localStorage.removeItem('nickname');
+            document.cookie = 'connect.sid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('无法连接到服务器，请稍后重试。');
+    });
 } else {
     // 显示昵称输入框
     nicknameContainer.style.display = 'block';
@@ -117,15 +139,38 @@ setNicknameBtn.addEventListener('click', () => {
 // 初始化 Socket.io 连接的函数
 function initSocketConnection() {
     socket = io({
-        withCredentials: true
+        withCredentials: true,
+        query: {
+            sessionId: sessionID
+        }
     });
 
     // 用于存储 sessionID
     sessionID = '';
 
+    // 是否为管理员
+    let isAdmin = false;
+
     // 接收服务器发送的 sessionID
     socket.on('setSessionID', (id) => {
         sessionID = id;
+
+        // 初始化 isAdmin
+        if (nickname.toLowerCase() === 'admin') {
+            isAdmin = true;
+        }
+    });
+
+    // 在 initSocketConnection 函数中，添加监听器
+    socket.on('interfaceReleasedByAdmin', () => {
+        // 执行释放界面的操作
+        if (selectedIndex !== null) {
+            releaseInterface();
+        }
+        
+        // 重新加载页面
+        location.reload();
+        alert('您的界面已被管理员释放。');
     });
 
     // 接收其他玩家的昵称更新
@@ -329,56 +374,59 @@ function initSocketConnection() {
     // 释放界面
     function releaseInterface() {
         if (selectedIndex !== null) {
+            const index = selectedIndex; // 先保存当前的 selectedIndex
+    
             // 停止游戏
             if (gameStarted) {
                 cancelAnimationFrame(animationFrameId);
                 gameStarted = false;
                 isPaused = false;
-
+    
                 // 移除键盘事件监听
                 document.removeEventListener('keydown', keyDownHandler);
                 window.removeEventListener('keydown', preventArrowKeyScroll);
-
+    
                 // 重置游戏状态
                 board = [];
                 currentTetromino = null;
                 nextTetromino = null;
                 score = 0;
-
+    
                 // 清空画布
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 nextCtx.clearRect(0, 0, nextCanvas.width, nextCanvas.height);
-
-                // 重置按钮文本
-                const startBtn = document.querySelector(`.game-interface[data-index="${selectedIndex}"] .startBtn`);
-                const pauseBtn = document.querySelector(`.game-interface[data-index="${selectedIndex}"] .pauseBtn`);
-                startBtn.innerText = '开始游戏';
-                pauseBtn.innerText = '暂停游戏';
-                startBtn.style.display = 'none';
-                pauseBtn.style.display = 'none';
-
-                // 移除按钮事件监听
-                startBtn.removeEventListener('click', startGame);
-                pauseBtn.removeEventListener('click', pauseGame);
             }
-
+    
+            // 无论游戏是否开始，都需要隐藏按钮并移除事件监听
+            const startBtn = document.querySelector(`.game-interface[data-index="${index}"] .startBtn`);
+            const pauseBtn = document.querySelector(`.game-interface[data-index="${index}"] .pauseBtn`);
+            startBtn.style.display = 'none';
+            pauseBtn.style.display = 'none';
+    
+            startBtn.innerText = '开始游戏';
+            pauseBtn.innerText = '暂停游戏';
+    
+            startBtn.removeEventListener('click', startGame);
+            pauseBtn.removeEventListener('click', pauseGame);
+    
             // 重置界面显示
-            const cancelBtn = document.querySelector(`.game-interface[data-index="${selectedIndex}"] .cancelBtn`);
-            const selectBtn = document.querySelector(`.game-interface[data-index="${selectedIndex}"] .selectBtn`);
+            const cancelBtn = document.querySelector(`.game-interface[data-index="${index}"] .cancelBtn`);
+            const selectBtn = document.querySelector(`.game-interface[data-index="${index}"] .selectBtn`);
             cancelBtn.style.display = 'none';
             selectBtn.disabled = false;
-            selectBtn.innerText = `选择界面 ${parseInt(selectedIndex) + 1}`;
-
+            selectBtn.innerText = `选择界面 ${parseInt(index) + 1}`;
+    
             // 更新 selectedIndex
             selectedIndex = null;
-
+    
             // 通知服务器释放界面
             socket.emit('releaseInterface');
-
+    
             // 更新界面显示
             updateInterfaceDisplay();
         }
     }
+
 
     // 接收开始游戏的通知
     socket.on('startGame', (index) => {
@@ -396,23 +444,23 @@ function initSocketConnection() {
         ctx = canvas.getContext('2d');
         nextCanvas = document.getElementById(`nextCanvas${index}`);
         nextCtx = nextCanvas.getContext('2d');
-
+    
         const startBtn = document.querySelector(`.game-interface[data-index="${index}"] .startBtn`);
         const pauseBtn = document.querySelector(`.game-interface[data-index="${index}"] .pauseBtn`);
-
+    
         startBtn.style.display = 'inline-block';
         pauseBtn.style.display = 'inline-block';
-
+    
         startBtn.addEventListener('click', startGame);
         pauseBtn.addEventListener('click', pauseGame);
-
+    
         // 根据游戏是否已开始，更新开始按钮文本
         if (gameStarted) {
             startBtn.innerText = '重新开始';
         } else {
             startBtn.innerText = '开始游戏';
         }
-
+    
         // 根据是否暂停，更新暂停按钮文本
         if (isPaused) {
             pauseBtn.innerText = '继续游戏';
@@ -420,6 +468,7 @@ function initSocketConnection() {
             pauseBtn.innerText = '暂停游戏';
         }
     }
+
 
     // 恢复游戏状态的函数
     function restoreGameState(state) {
@@ -928,7 +977,60 @@ function initSocketConnection() {
                 }
             }
         });
+
+        // 添加管理员右键菜单
+        element.addEventListener('contextmenu', (e) => {
+            e.preventDefault(); // 阻止默认的右键菜单
+
+            if (isAdmin) {
+                showContextMenu(e, element);
+            }
+        });
     });
+
+    // 添加自定义右键菜单
+    let contextMenu;
+
+    function showContextMenu(e, element) {
+        // 移除现有的右键菜单
+        if (contextMenu) {
+            contextMenu.remove();
+        }
+
+        contextMenu = document.createElement('div');
+        contextMenu.classList.add('custom-context-menu');
+
+        // 添加选项
+        const releaseInterfaceOption = document.createElement('div');
+        releaseInterfaceOption.classList.add('context-menu-item');
+        releaseInterfaceOption.innerText = '释放界面';
+        contextMenu.appendChild(releaseInterfaceOption);
+
+        // 点击释放界面
+        releaseInterfaceOption.addEventListener('click', () => {
+            const index = parseInt(element.getAttribute('data-index'));
+            socket.emit('adminReleaseInterface', index);
+            contextMenu.remove();
+            contextMenu = null;
+        });
+
+        // 设置右键菜单位置
+        contextMenu.style.top = `${e.clientY}px`;
+        contextMenu.style.left = `${e.clientX}px`;
+
+        document.body.appendChild(contextMenu);
+
+        // 点击其他地方时隐藏菜单
+        document.addEventListener('click', hideContextMenu);
+    }
+
+    function hideContextMenu() {
+        if (contextMenu) {
+            contextMenu.remove();
+            contextMenu = null;
+        }
+        document.removeEventListener('click', hideContextMenu);
+    }
 
     // 聊天室功能
     // 聊天室拖动功能
@@ -1091,6 +1193,25 @@ function initSocketConnection() {
         location.reload();
     });
 
+    // 监听连接错误
+    socket.on('connect_error', (err) => {
+        console.log('连接错误:', err);
+
+        // 如果错误是认证错误，清除会话并重新加载页面
+        if (err.message === 'Authentication error') {
+            alert('会话已过期，请重新登录。');
+
+            // 清除会话 cookie
+            document.cookie = 'connect.sid=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+
+            // 清除本地存储的昵称
+            localStorage.removeItem('nickname');
+
+            // 重新加载页面
+            location.reload();
+        }
+    });
+
     // 在窗口关闭或刷新时，自动暂停游戏并保存状态
     window.addEventListener('beforeunload', () => {
         if (selectedIndex !== null && gameStarted && !isPaused) {
@@ -1128,3 +1249,9 @@ function initSocketConnection() {
         // 可以在此处添加逻辑，例如提示用户继续游戏
     });
 }
+
+// 全局禁用右键菜单（可选，根据需要）
+document.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+});
+

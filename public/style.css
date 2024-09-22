@@ -4,6 +4,8 @@
  * 详情请参阅 LICENSE 文件。
  */
 
+/* style.css */
+
 body {
     text-align: center;
     background-color: #333;
@@ -207,4 +209,27 @@ button {
 
 #chatContainer.minimized.flash #chatHeader {
     animation: flash 1s infinite;
+}
+
+/* 自定义右键菜单样式 */
+.custom-context-menu {
+    position: absolute;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    box-shadow: 0px 0px 5px #aaa;
+    z-index: 1000;
+    min-width: 150px;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.custom-context-menu .context-menu-item {
+    padding: 10px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #333;
+}
+
+.custom-context-menu .context-menu-item:hover {
+    background-color: #f0f0f0;
 }

@@ -4,6 +4,8 @@
  * 详情请参阅 LICENSE 文件。
  */
 
+// server.js
+
 const express = require('express');
 const app = express();
 const http = require('http').Server(app);
@@ -31,6 +33,9 @@ let reservedNicknames = new Set();
 // 计时器数据
 let selectionTimes = {}; // 记录玩家选择界面的时间戳
 let gameTimes = {}; // 记录玩家游戏的开始时间、暂停状态等
+
+// 保存 Socket 与 sessionID 的映射
+let sessionSockets = {};
 
 // 加载持久化数据（如果存在）
 function loadData() {
@@ -161,6 +166,15 @@ app.post('/setNickname', sessionMiddleware, (req, res) => {
     }
 });
 
+// 检查会话是否有效
+app.get('/checkSession', sessionMiddleware, (req, res) => {
+    if (req.session && req.session.nickname) {
+        res.json({ valid: true });
+    } else {
+        res.json({ valid: false });
+    }
+});
+
 // 静态文件中间件，放在 sessionMiddleware 之后
 app.use(sessionMiddleware);
 app.use(express.static('public'));
@@ -179,7 +193,6 @@ io.use((socket, next) => {
                 sessionId = signature.unsign(sessionCookie.slice(2), secretKey);
                 if (!sessionId) {
                     console.log('Session ID 解码失败');
-                    return next(new Error('Authentication error'));
                 }
             } else {
                 sessionId = sessionCookie;
@@ -206,6 +219,10 @@ io.use((socket, next) => {
         // 将 sessionData 存储在 socket.session 中
         socket.session = sessionData;
         socket.sessionID = sessionId;
+
+        // 保存 socket 与 sessionID 的映射
+        sessionSockets[sessionId] = socket;
+
         next();
     });
 });
@@ -256,7 +273,7 @@ io.on('connection', (socket) => {
 
     // 监听玩家选择界面
     socket.on('selectInterface', (index) => {
-        if (interfaces[index] === null && !players[socket.sessionID]) {
+        if (interfaces[index] === null && players[socket.sessionID] === undefined) {
             interfaces[index] = socket.sessionID;
             players[socket.sessionID] = index;
             nicknames[index] = socket.nickname || '匿名'; // 仅用于显示
@@ -310,7 +327,7 @@ io.on('connection', (socket) => {
                 isPaused: false,
                 isOver: false
             };
-    
+
             console.log(`用户${socket.sessionID}在界面${index}重新开始了游戏`);
         }
     });
@@ -388,7 +405,7 @@ io.on('connection', (socket) => {
 
             io.emit('interfaceStatus', interfaces);
             io.emit('updateNicknames', nicknames);
-            io.emit('resetInterface', index); // 通知客户端重置界面状态
+            io.emit('resetInterface', index);
             console.log(`用户${socket.sessionID}释放了界面${index}`);
         }
     });
@@ -452,7 +469,7 @@ io.on('connection', (socket) => {
 
                     io.emit('interfaceStatus', interfaces);
                     io.emit('updateNicknames', nicknames);
-                    io.emit('resetInterface', index); // 通知客户端重置界面状态
+                    io.emit('resetInterface', index);
                     console.log(`用户${socket.sessionID}释放了界面${index}`);
                 }
 
@@ -577,9 +594,64 @@ io.on('connection', (socket) => {
         io.emit('chatMessage', data);
     });
 
+    // 监听管理员释放界面
+    socket.on('adminReleaseInterface', (index) => {
+        if (socket.nickname && socket.nickname.toLowerCase() === 'admin') {
+            let sessionId = interfaces[index];
+            if (sessionId) {
+                // 删除玩家数据
+                delete players[sessionId];
+
+                // 删除昵称
+                let nickname = nicknames[index];
+                if (nickname) {
+                    reservedNicknames.delete(nickname.toLowerCase());
+                }
+                nicknames[index] = null;
+                interfaces[index] = null;
+                delete selectionTimes[index];
+                delete gameTimes[index];
+                delete gameStates[sessionId];
+                delete latestGameStates[index];
+
+                // 删除会话
+                sessionStore.destroy(sessionId, (err) => {
+                    if (err) {
+                        console.error('销毁会话失败:', err);
+                    }
+                });
+
+                // 保存数据
+                saveData();
+
+                // 通知客户端
+                io.emit('interfaceStatus', interfaces);
+                io.emit('updateNicknames', nicknames);
+                io.emit('resetInterface', index);
+
+                console.log(`管理员释放了界面 ${index}`);
+
+                // 通知被释放的玩家
+                if (sessionSockets[sessionId]) {
+                    sessionSockets[sessionId].emit('interfaceReleasedByAdmin');
+                    // 断开连接（可选）
+                    sessionSockets[sessionId].disconnect(true);
+                    delete sessionSockets[sessionId];
+                }
+            }
+        } else {
+            socket.emit('systemMessage', '您没有权限执行此操作。');
+        }
+    });
+
     // 处理用户断开连接
     socket.on('disconnect', () => {
         console.log(`用户断开：${socket.id}`);
+
+        // 移除 sessionSockets 中的映射
+        if (socket.sessionID) {
+            delete sessionSockets[socket.sessionID];
+        }
 
         // 不从 reservedNicknames 中移除昵称，昵称保持占用
         // 只有在用户主动使用 /logout 命令时才释放昵称

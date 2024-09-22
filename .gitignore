@@ -1,0 +1,5 @@
+node_modules/
+sessions/
+data.json
+chat_history.txt
+*.log
